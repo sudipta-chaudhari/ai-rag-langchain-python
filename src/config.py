@@ -24,7 +24,7 @@ LLM_MODEL = "text-embedding-nomic-embed-text-v1.5"
 # Temperature controls randomness in LLM responses (0.0-1.0)
 # Lower values (closer to 0) produce more deterministic/focused responses
 # Higher values (closer to 1) produce more creative/varied responses
-LLM_TEMPERATURE = 0
+LLM_TEMPERATURE = 0.7
 
 # ==================== Data Configuration ====================
 # These settings control how documents are processed and stored

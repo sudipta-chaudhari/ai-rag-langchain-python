@@ -13,9 +13,9 @@ document chunks, then passes them to the LLM as context for answer generation.
 
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from config import VECTOR_STORE_PATH, LLM_BASE_URL, LLM_MODEL, LLM_TEMPERATURE
 
 def load_vector_store():
@@ -77,26 +77,19 @@ def create_qa_chain():
     
     # Initialize the LLM for generating answers
     # Uses OpenAI-compatible API format pointing to local model
-    llm = OpenAI(
-        openai_api_base=LLM_BASE_URL,  # Local endpoint
-        openai_api_key="not-needed",  # Dummy key for local model
-        model_name=LLM_MODEL,  # The model to use for generation
+    llm = ChatOpenAI(
+        base_url=LLM_BASE_URL,  # Local endpoint
+        api_key="not-needed",  # Dummy key for local model
+        model=LLM_MODEL,  # The model to use for generation
         temperature=LLM_TEMPERATURE  # Controls creativity (0.7 = balanced)
     )
     
-    # Create a custom prompt template to replace the default one
-    # This prevents unwanted default messages from being appended
-    prompt_template = PromptTemplate(
-        input_variables=["context", "question"],
-        template="""Use the following pieces of context to answer the question at the end. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer.
-
-Context:
-{context}
-
-Question: {question}
-Answer:"""
-    )
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant. Use only the provided context to answer the question. "
+        "If the answer is not in the context, say exactly: Sorry, I don't know the answer to this question."
+        "Do not try to make up an answer."),
+        ("human", "Context: {context}\n\nQuestion: {question}")
+    ])
     
     # Create the RetrievalQA chain with custom prompt
     # This combines the vector store retriever with the LLM for Q&A
@@ -104,7 +97,7 @@ Answer:"""
         llm=llm,
         chain_type="stuff",  # Combine all retrieved docs and send to LLM
         retriever=vector_store.as_retriever(search_kwargs={"k": 3}),  # Top 3 similar chunks
-        chain_type_kwargs={"prompt": prompt_template}  # Use custom prompt template
+        chain_type_kwargs={"prompt": chat_prompt}  # Use custom prompt template
     )
     
     return qa_chain
