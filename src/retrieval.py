@@ -16,7 +16,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.prompts import ChatPromptTemplate
-from config import VECTOR_STORE_PATH, LLM_BASE_URL, LLM_MODEL, LLM_TEMPERATURE
+from config import VECTOR_STORE_PATH, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_TEMPERATURE
 
 def load_vector_store():
     """
@@ -38,7 +38,7 @@ def load_vector_store():
     embeddings = OpenAIEmbeddings(
         model=LLM_MODEL,  # Must match the model used during ingestion
         base_url=LLM_BASE_URL,  # Local endpoint
-        api_key="",  # Dummy key for local model
+        api_key=LLM_API_KEY,  # Dummy key for local model
         check_embedding_ctx_length=False  # Bypass context length validation
     )
 
@@ -79,7 +79,7 @@ def create_qa_chain():
     # Uses OpenAI-compatible API format pointing to local model
     llm = ChatOpenAI(
         base_url=LLM_BASE_URL,  # Local endpoint
-        api_key="not-needed",  # Dummy key for local model
+        api_key=LLM_API_KEY,  # Dummy key for local model
         model=LLM_MODEL,  # The model to use for generation
         temperature=LLM_TEMPERATURE  # Controls creativity (0.7 = balanced)
     )

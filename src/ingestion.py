@@ -17,7 +17,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from config import DATA_FOLDER, CHUNK_SIZE, CHUNK_OVERLAP, LLM_MODEL, VECTOR_STORE_PATH, LLM_BASE_URL
+from config import DATA_FOLDER, CHUNK_SIZE, CHUNK_OVERLAP, LLM_MODEL, LLM_API_KEY, VECTOR_STORE_PATH, LLM_BASE_URL
 
 def load_pdfs(data_folder: str) -> list:
     """
@@ -122,7 +122,7 @@ def create_vector_store(chunked_docs: list):
     embeddings = OpenAIEmbeddings(
         model=LLM_MODEL,  # The specific embedding model to use
         base_url=LLM_BASE_URL,  # Local endpoint
-        api_key="",  # Dummy key (local model doesn't validate)
+        api_key=LLM_API_KEY,  # Dummy key (local model doesn't validate). With real API key, read this from .env file
         check_embedding_ctx_length=False  # Don't check context length limits
     )
     

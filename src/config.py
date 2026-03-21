@@ -9,13 +9,16 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv() # This is not needed now. With real API key, read this from .env file
 
 # ==================== LLM (Large Language Model) Configuration ====================
 # These settings configure how the LLM is accessed and how it behaves
 
 # BASE URL for the LLM API endpoint (running on local machine)
 LLM_BASE_URL = "http://127.0.0.1:1234/v1"
+
+# API KEY for the LLM API endpoint (running on local machine). With real API key, read this from .env file
+LLM_API_KEY = "not needed"
 
 # The specific model to use for embeddings
 # This model converts text into vector representations for semantic search
