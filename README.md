@@ -1,4 +1,4 @@
-# Retrieval-Augmented Generation System
+# Retrieval-Augmented Generation (RAG) with LangChain, OpenAI and Python
 
 A comprehensive Python implementation of a **Retrieval-Augmented Generation (RAG)** pipeline that combines document retrieval with Large Language Models to provide accurate, context-aware answers. This project demonstrates how to build an intelligent question-answering system that can reference your own documents.
 
