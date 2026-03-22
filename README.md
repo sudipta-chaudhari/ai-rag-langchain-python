@@ -2,7 +2,7 @@
 
 A comprehensive Python implementation of a **Retrieval-Augmented Generation (RAG)** pipeline that combines document retrieval with Large Language Models to provide accurate, context-aware answers. This project demonstrates how to build an intelligent question-answering system that can reference your own documents.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Project Architecture](#project-architecture)
@@ -19,7 +19,7 @@ A comprehensive Python implementation of a **Retrieval-Augmented Generation (RAG
 
 ---
 
-## 🎯 Overview
+## Overview
 
 RAG (Retrieval-Augmented Generation) is a powerful AI technique that combines two key components:
 
@@ -41,7 +41,7 @@ RAG solves these problems by:
 
 ---
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 ```
 USER QUERY
@@ -78,7 +78,7 @@ RESPONSE TO USER
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 RAG_Demo_Python/
@@ -108,7 +108,7 @@ RAG_Demo_Python/
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 
@@ -168,7 +168,7 @@ pip install -e .
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All configuration is managed in `src/config.py`:
 
@@ -197,7 +197,7 @@ VECTOR_STORE_PATH = "../vector_store"  # Where to save FAISS database
 
 ---
 
-## 💻 Usage Guide
+## Usage Guide
 
 ### Basic Usage
 
@@ -245,7 +245,7 @@ print(answer)
 
 ---
 
-## 📚 Detailed Module Documentation
+## Detailed Module Documentation
 
 ### 1. `src/config.py` - Configuration Module
 
@@ -369,7 +369,7 @@ python src/main.py
 
 ---
 
-## 🔄 Project Flow
+## Project Flow
 
 ### Complete RAG Pipeline Flow
 
@@ -487,7 +487,7 @@ python src/main.py
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 ### Core Packages
 
@@ -515,7 +515,7 @@ pip install -e .
 
 ---
 
-## ✨ Features
+## Features
 
 ### Current Features
 - ✅ PDF document ingestion
@@ -545,7 +545,7 @@ pip install -e .
 
 ---
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### Adjusting Chunk Parameters
 
@@ -578,7 +578,7 @@ retriever=vector_store.as_retriever(search_kwargs={"k": 5})  # Get top 5 docs
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Issue: "No PDF files found in data folder"
 
@@ -634,7 +634,7 @@ pip install -e .
 
 ---
 
-## 📝 Example Queries
+## Example Queries
 
 ### Technical Queries
 - "What are the main components?"
@@ -658,7 +658,7 @@ pip install -e .
 
 ---
 
-## 📞 Support & Contributions
+## Support & Contributions
 
 ### Getting Help
 1. Check [Troubleshooting](#troubleshooting) section
@@ -675,9 +675,9 @@ pip install -e .
 
 ---
 
-## 📄 License
+## License
 
-This project is open source and available for educational and research purposes.
+This project is open-source and available under the MIT License. See LICENSE file for details.
 
 ---
 
@@ -688,7 +688,7 @@ This project is open source and available for educational and research purposes.
 
 ---
 
-## 🚀 Quick Start Summary
+## Quick Start Summary
 
 ```bash
 # 1. Setup
@@ -709,6 +709,6 @@ Ask a question (or 'exit' to quit): What is the main topic?
 
 ---
 
-**Last Updated**: March 18, 2026
+**Last Updated**: March 2026
 
 For the most current information, check inline code comments in each module.
