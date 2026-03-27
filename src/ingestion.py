@@ -23,7 +23,7 @@ class Ingestion:
     This class manages document loading, chunking, and vector store creation.
     """
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         """
         Initialize the ingestion pipeline.
 
@@ -61,7 +61,7 @@ class Ingestion:
         print(f"Created {len(chunked_docs)} chunks")
         return chunked_docs
 
-    def run(self):
+    def run(self) -> None:
         """
         Execute the complete ingestion pipeline.
 

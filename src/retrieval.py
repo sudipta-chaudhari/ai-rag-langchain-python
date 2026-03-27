@@ -22,7 +22,7 @@ class Retrieval:
     This class manages vector store loading, LLM initialization, and query processing.
     """
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         """
         Initialize the retrieval pipeline.
 
@@ -35,7 +35,7 @@ class Retrieval:
         self._llm = None
         self._qa_chain = None
 
-    def load_vector_store(self):
+    def load_vector_store(self) -> None:
         """
         Load the FAISS vector store from disk.
 
@@ -48,7 +48,7 @@ class Retrieval:
             allow_dangerous_deserialization=True
         )
 
-    def initialize_llm(self):
+    def initialize_llm(self) -> None:
         """Initialize the LLM."""
         if self._llm is None:
             self._llm = ChatOpenAI(
@@ -58,7 +58,7 @@ class Retrieval:
                 temperature=self._config.llm_temperature
             )
 
-    def create_qa_chain(self):
+    def create_qa_chain(self) -> None:
         """Create the RetrievalQA chain."""
         if self._qa_chain is None:
             chat_prompt = ChatPromptTemplate.from_messages([

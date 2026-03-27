@@ -16,7 +16,7 @@ class Config:
     All configuration values are read-only properties.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration with default values."""
         # reads key-value pairs from a .env file and adds them to your system's 
         # environment variables so they can be accessed via os.environ
@@ -37,33 +37,33 @@ class Config:
         self._vector_store_path = os.path.join(os.path.dirname(__file__), "..", "vector_store")
 
     @property
-    def llm_base_url(self):
+    def llm_base_url(self) -> str:
         return self._llm_base_url
 
     @property
-    def llm_api_key(self):
+    def llm_api_key(self) -> str:
         return self._llm_api_key
 
     @property
-    def llm_model(self):
+    def llm_model(self) -> str:
         return self._llm_model
 
     @property
-    def llm_temperature(self):
+    def llm_temperature(self) -> float:
         return self._llm_temperature
 
     @property
-    def data_folder(self):
+    def data_folder(self) -> str:
         return self._data_folder
 
     @property
-    def chunk_size(self):
+    def chunk_size(self) -> int:
         return self._chunk_size
 
     @property
-    def chunk_overlap(self):
+    def chunk_overlap(self) -> int:
         return self._chunk_overlap
 
     @property
-    def vector_store_path(self):
+    def vector_store_path(self) -> str:
         return self._vector_store_path

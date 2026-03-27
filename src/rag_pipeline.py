@@ -18,13 +18,13 @@ class RAGPipeline:
     component classes: Config, Ingestion, and Retrieval.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the RAG pipeline with private properties."""
         self._config = Config()
         self._ingestion = Ingestion(self._config)
         self._retrieval = Retrieval(self._config)
 
-    def ingest(self):
+    def ingest(self) -> None:
         """Run the data ingestion pipeline."""
         self._ingestion.run()
 

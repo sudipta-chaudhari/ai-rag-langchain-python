@@ -16,7 +16,7 @@ The flow:
 from rag_pipeline import RAGPipeline
 
 
-def main():
+def main() -> None:
     """
     Main entry point for the RAG pipeline demonstration.
     """

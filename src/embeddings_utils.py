@@ -1,9 +1,10 @@
 """Shared embedding initialization utility."""
 
 from langchain_openai.embeddings import OpenAIEmbeddings
+from config import Config
 
 
-def initialize_embeddings(config):
+def initialize_embeddings(config: Config) -> OpenAIEmbeddings:
     """Return an OpenAIEmbeddings instance configured from Config object."""
     return OpenAIEmbeddings(
         model=config.llm_model,
