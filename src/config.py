@@ -36,6 +36,10 @@ class Config:
         # ==================== Vector Store Configuration ====================
         self._vector_store_path = os.path.join(os.path.dirname(__file__), "..", "vector_store")
 
+        # ==================== Logging Configuration ====================
+        # Toggle console logging for entire codebase from this single location
+        self._console_logging_enabled = False  # Set to True to enable console output
+
     @property
     def llm_base_url(self) -> str:
         return self._llm_base_url
@@ -67,3 +71,8 @@ class Config:
     @property
     def vector_store_path(self) -> str:
         return self._vector_store_path
+
+    @property
+    def console_logging_enabled(self) -> bool:
+        """Controls console logging across entire codebase."""
+        return self._console_logging_enabled
