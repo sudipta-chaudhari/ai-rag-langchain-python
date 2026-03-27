@@ -13,28 +13,18 @@ The flow:
 - Each question is answered using RAG (retrieval + generation)
 """
 
-from ingestion import ingest_data
-from retrieval import query
+from rag_pipeline import RAGPipeline
+
 
 def main():
     """
     Main entry point for the RAG pipeline demonstration.
-    
-    This function:
-    1. Displays a welcome message
-    2. Calls the ingestion pipeline to load and embed documents
-    3. Enters an interactive query loop where users can ask questions
-    4. Processes each question through the RAG pipeline and displays results
-    
-    The interactive loop runs until the user enters 'exit'.
     """
     print("=== RAG Pipeline Demo ===\n")
-    
-    # Phase 1: Data Ingestion
-    # Load all PDFs from the data folder and create embeddings
-    ingest_data()
-    
-    # Phase 2: Interactive Query Mode
+
+    pipeline = RAGPipeline()
+    pipeline.ingest()
+
     print("\n=== Query Mode ===")
     while True:
         # Get user input
@@ -45,14 +35,8 @@ def main():
             break
         
         print("\nSearching...")
-        # Query the RAG pipeline with the user's question
-        # The query() function handles:
-        # 1. Embedding the question
-        # 2. Searching for similar documents in the vector store
-        # 3. Generating an answer using the LLM with retrieved context
-        response = query(user_query)
-        
-        # Display the generated answer
+        response = pipeline.query(user_query)
+
         print(f"\nAnswer: {response}\n")
 
 if __name__ == "__main__":

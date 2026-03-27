@@ -5,9 +5,9 @@ This class encapsulates all functionality of the RAG pipeline using
 separate class-based components for configuration, ingestion, and retrieval.
 """
 
-from src.config_class import Config
-from src.ingestion_class import Ingestion
-from src.retrieval_class import Retrieval
+from config import Config
+from ingestion import Ingestion
+from retrieval import Retrieval
 
 
 class RAGPipeline:
