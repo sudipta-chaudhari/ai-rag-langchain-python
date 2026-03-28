@@ -13,47 +13,109 @@ The flow:
 - Each question is answered using RAG (retrieval + generation)
 """
 
-from ingestion import ingest_data
-from retrieval import query
+import sys
+import logging
+from rag_pipeline import RAGPipeline
+from logging_config import setup_logging
 
-def main():
+# Initialize logging
+logger = setup_logging("rag_pipeline_main")
+
+
+def main() -> None:
     """
     Main entry point for the RAG pipeline demonstration.
     
-    This function:
-    1. Displays a welcome message
-    2. Calls the ingestion pipeline to load and embed documents
-    3. Enters an interactive query loop where users can ask questions
-    4. Processes each question through the RAG pipeline and displays results
-    
-    The interactive loop runs until the user enters 'exit'.
+    Handles:
+    - RAG pipeline initialization
+    - Data ingestion
+    - Interactive query mode
+    - Error handling and logging
     """
-    print("=== RAG Pipeline Demo ===\n")
-    
-    # Phase 1: Data Ingestion
-    # Load all PDFs from the data folder and create embeddings
-    ingest_data()
-    
-    # Phase 2: Interactive Query Mode
-    print("\n=== Query Mode ===")
-    while True:
-        # Get user input
-        user_query = input("\nAsk a question (or 'exit' to quit): ").strip()
+    try:
+        logger.info("=" * 60)
+        logger.info("Starting RAG Pipeline Demo")
+        logger.info("=" * 60)
         
-        # Check for exit command
-        if user_query.lower() == 'exit':
-            break
+        print("=== RAG Pipeline Demo ===\n")
+
+        # Initialize pipeline
+        try:
+            logger.debug("Initializing RAG pipeline...")
+            pipeline = RAGPipeline()
+            logger.info("RAG pipeline initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG pipeline: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
+
+        # Run ingestion
+        try:
+            logger.info("Starting data ingestion phase...")
+            pipeline.ingest()
+            logger.info("Data ingestion completed")
+        except Exception as e:
+            logger.error(f"Ingestion failed: {type(e).__name__}: {str(e)}", exc_info=True)
+            print("\nError during data ingestion. Please check the logs for details.")
+            sys.exit(1)
+
+        # Query mode
+        logger.info("Entering interactive query mode")
+        print("\n=== Query Mode ===")
+        query_count = 0
         
-        print("\nSearching...")
-        # Query the RAG pipeline with the user's question
-        # The query() function handles:
-        # 1. Embedding the question
-        # 2. Searching for similar documents in the vector store
-        # 3. Generating an answer using the LLM with retrieved context
-        response = query(user_query)
-        
-        # Display the generated answer
-        print(f"\nAnswer: {response}\n")
+        while True:
+            try:
+                # Get user input
+                user_query = input("\nAsk a question (or 'exit' to quit): ").strip()
+                
+                # Check for exit command
+                if user_query.lower() == 'exit':
+                    logger.info(f"User exited. Processed {query_count} queries.")
+                    print("\nGoodbye!")
+                    break
+                
+                if not user_query:
+                    logger.debug("Empty query received, skipping")
+                    print("Please enter a valid question.")
+                    continue
+                
+                query_count += 1
+                logger.info(f"Processing query #{query_count}: {user_query[:100]}")
+                
+                print("\nSearching...")
+                response = pipeline.query(user_query)
+
+                print(f"\nAnswer: {response}\n")
+                logger.info(f"Query #{query_count} completed successfully")
+                
+            except ValueError as e:
+                logger.warning(f"Invalid query input: {str(e)}")
+                print(f"Error: {str(e)}")
+            except FileNotFoundError as e:
+                logger.error(f"Required resource not found: {str(e)}", exc_info=True)
+                print(f"Error: {str(e)}")
+                print("Please ensure data ingestion has been completed successfully.")
+                break
+            except ConnectionError as e:
+                logger.error(f"Connection error: {str(e)}", exc_info=True)
+                print("Error: Failed to connect to the language model service.")
+                print("Please ensure the LLM service is running.")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error during query: {type(e).__name__}: {str(e)}", exc_info=True)
+                print(f"Error processing query: {str(e)}")
+                print("Check the logs for more details.")
+
+        logger.info("=" * 60)
+        logger.info("RAG Pipeline Demo Completed")
+        logger.info("=" * 60)
+
+    except Exception as e:
+        logger.error("=" * 60)
+        logger.error(f"CRITICAL ERROR: {type(e).__name__}: {str(e)}", exc_info=True)
+        logger.error("=" * 60)
+        print("\nCritical error occurred. Please check the logs for details.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

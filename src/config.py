@@ -1,52 +1,78 @@
 """
-Configuration module for the RAG (Retrieval-Augmented Generation) Pipeline.
+Configuration class for the RAG (Retrieval-Augmented Generation) Pipeline.
 
-This module centralizes all configuration parameters including LLM settings,
+This class centralizes all configuration parameters including LLM settings,
 data processing parameters, and vector store paths.
 """
 
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv() # This is not needed now. With real API key, read this from .env file
 
-# ==================== LLM (Large Language Model) Configuration ====================
-# These settings configure how the LLM is accessed and how it behaves
+class Config:
+    """
+    Configuration container for RAG pipeline settings.
 
-# BASE URL for the LLM API endpoint (running on local machine)
-LLM_BASE_URL = "http://127.0.0.1:1234/v1"
+    All configuration values are read-only properties.
+    """
 
-# API KEY for the LLM API endpoint (running on local machine). With real API key, read this from .env file
-LLM_API_KEY = "not needed"
+    def __init__(self) -> None:
+        """Initialize configuration with default values."""
+        # reads key-value pairs from a .env file and adds them to your system's 
+        # environment variables so they can be accessed via os.environ
+        load_dotenv()
 
-# The specific model to use for embeddings
-# This model converts text into vector representations for semantic search
-LLM_MODEL = "text-embedding-nomic-embed-text-v1.5"
+        # ==================== LLM Configuration ====================
+        self._llm_base_url = "http://127.0.0.1:1234/v1"
+        self._llm_api_key = "not needed"
+        self._llm_model = "text-embedding-nomic-embed-text-v1.5"
+        self._llm_temperature = 0.7
 
-# Temperature controls randomness in LLM responses (0.0-1.0)
-# Lower values (closer to 0) produce more deterministic/focused responses
-# Higher values (closer to 1) produce more creative/varied responses
-LLM_TEMPERATURE = 0.7
+        # ==================== Data Configuration ====================
+        self._data_folder = os.path.join(os.path.dirname(__file__), "..", "data")
+        self._chunk_size = 1000
+        self._chunk_overlap = 200
 
-# ==================== Data Configuration ====================
-# These settings control how documents are processed and stored
+        # ==================== Vector Store Configuration ====================
+        self._vector_store_path = os.path.join(os.path.dirname(__file__), "..", "vector_store")
 
-# Path to the data folder containing PDF files to be ingested
-# Uses relative path to locate the 'data' folder at the root level
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), "..", "data")
+        # ==================== Logging Configuration ====================
+        # Toggle console logging for entire codebase from this single location
+        self._console_logging_enabled = False  # Set to True to enable console output
 
-# CHUNK_SIZE: Maximum number of characters in each text chunk
-# Larger chunks retain more context but may be less focused
-CHUNK_SIZE = 1000
+    @property
+    def llm_base_url(self) -> str:
+        return self._llm_base_url
 
-# CHUNK_OVERLAP: Number of overlapping characters between consecutive chunks
-# Overlap ensures context continuity between chunks for better retrieval
-CHUNK_OVERLAP = 200
+    @property
+    def llm_api_key(self) -> str:
+        return self._llm_api_key
 
-# ==================== Vector Store Configuration ====================
-# These settings configure the storage and location of vector embeddings
+    @property
+    def llm_model(self) -> str:
+        return self._llm_model
 
-# Path to store the FAISS (Facebook AI Similarity Search) vector database
-# FAISS is an efficient library for similarity search and clustering of dense vectors
-VECTOR_STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "vector_store")
+    @property
+    def llm_temperature(self) -> float:
+        return self._llm_temperature
+
+    @property
+    def data_folder(self) -> str:
+        return self._data_folder
+
+    @property
+    def chunk_size(self) -> int:
+        return self._chunk_size
+
+    @property
+    def chunk_overlap(self) -> int:
+        return self._chunk_overlap
+
+    @property
+    def vector_store_path(self) -> str:
+        return self._vector_store_path
+
+    @property
+    def console_logging_enabled(self) -> bool:
+        """Controls console logging across entire codebase."""
+        return self._console_logging_enabled

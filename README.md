@@ -81,20 +81,27 @@ RESPONSE TO USER
 ## Project Structure
 
 ```
-RAG_Demo_Python/
+RAG_Pipeline/
 ├── README.md                          # This file - comprehensive documentation
 ├── pyproject.toml                     # Python project metadata and dependencies
+├── main.py                            # Root entry point with CLI interface
 ├── data/                              # Folder for input PDF documents
 │   └── [Place your PDF files here]    # PDFs to be ingested
+├── logs/                              # Application logs (auto-generated)
+│   └── rag_pipeline.log              # Rolling log file with DEBUG level detail
 ├── vector_store/                      # FAISS vector database (auto-generated)
 │   ├── index.faiss                    # FAISS index with embeddings
-│   └── docstore.pkl                   # Document metadata storage
-├── src/                               # Main source code
-│   ├── __init__.py                    # Package initialization
-│   ├── config.py                      # Configuration parameters (LLM, data paths, etc.)
-│   ├── main.py                        # Main entry point with CLI interface
-│   ├── ingestion.py                   # Data ingestion pipeline (load PDFs → create embeddings)
-│   ├── retrieval.py                   # Query pipeline (search → generation)
+│   ├── docstore.pkl                   # Document metadata storage
+│   └── index.pkl                      # Index metadata
+├── src/                               # Main source code package
+│   ├── __init__.py                    # Package initialization and public API
+│   ├── config.py                      # Configuration class with LLM/data settings
+│   ├── rag_pipeline.py                # RAGPipeline orchestrator class
+│   ├── ingestion.py                   # Ingestion class (load PDFs → create embeddings)
+│   ├── retrieval.py                   # Retrieval class (search vectors → generate answers)
+│   ├── embeddings_utils.py            # Shared embedding utilities
+│   ├── logging_config.py              # Centralized logging setup
+│   └── main.py                        # Alternate entry point with logging
 └── venv/                              # Python virtual environment (created during setup)
 ```
 
@@ -103,8 +110,9 @@ RAG_Demo_Python/
 | Directory | Purpose |
 |-----------|---------|
 | `data/` | Where you place PDF files to be ingested into the RAG system |
+| `logs/` | Application logs with rolling file handler (auto-created) |
 | `vector_store/` | Persisted FAISS database with embeddings (created after ingestion) |
-| `src/` | Core source code for the RAG pipeline |
+| `src/` | Core source code with class-based RAG pipeline implementation |
 
 ---
 
@@ -137,9 +145,7 @@ source venv/bin/activate
 ### Step 3: Install Dependencies
 
 ```bash
-pip install -r requirements.txt
-
-# Or using the pyproject.toml
+# Using pyproject.toml (recommended)
 pip install -e .
 ```
 
@@ -170,30 +176,58 @@ pip install -e .
 
 ## Configuration
 
-All configuration is managed in `src/config.py`:
+All configuration is managed through the `src/config.py` module using a `Config` class. Configuration values are accessed as read-only properties:
 
 ```python
+from src.config import Config
+
+config = Config()
+
 # LLM Configuration
-LLM_BASE_URL = "http://127.0.0.1:1234/v1"  # Local LM-Studio endpoint
-LLM_MODEL = "text-embedding-nomic-embed-text-v1.5"  # Embedding model
-LLM_TEMPERATURE = 0.7  # Randomness (0.0-1.0): lower = focused, higher = creative
+print(config.llm_base_url)   # "http://127.0.0.1:1234/v1"
+print(config.llm_model)      # "text-embedding-nomic-embed-text-v1.5"
+print(config.llm_temperature)     # 0.7
 
 # Data Configuration
-CHUNK_SIZE = 1000  # Max characters per chunk
-CHUNK_OVERLAP = 200  # Overlapping chars between chunks (for context continuity)
+print(config.chunk_size)     # 1000
+print(config.chunk_overlap)  # 200
 
 # Vector Store Configuration
-VECTOR_STORE_PATH = "../vector_store"  # Where to save FAISS database
+print(config.vector_store_path)  # Path to vector_store directory
+
+# Logging Configuration
+print(config.console_logging_enabled)  # False (enable console output toggle)
+```
+
+### Modifying Configuration
+
+To modify configuration values, edit the `src/config.py` file and adjust the `__init__` method:
+
+```python
+class Config:
+    def __init__(self) -> None:
+        # ==================== LLM Configuration ====================
+        self._llm_base_url = "http://127.0.0.1:1234/v1"
+        self._llm_api_key = "not needed"
+        self._llm_model = "text-embedding-nomic-embed-text-v1.5"
+        self._llm_temperature = 0.7
+
+        # ==================== Data Configuration ====================
+        self._chunk_size = 1000  # Modify here
+        self._chunk_overlap = 200  # Or here
+
+        # ==================== Logging Configuration ====================
+        self._console_logging_enabled = False  # Set to True for console output
 ```
 
 ### Parameter Tuning Guide
 
-| Parameter | Impact | Recommended | Notes |
-|-----------|--------|-------------|-------|
-| `CHUNK_SIZE` | Context per retrieval | 800-1500 | Larger = more context, less precise |
-| `CHUNK_OVERLAP` | Context continuity | 100-300 | Higher = better flow, more storage |
-| `LLM_TEMPERATURE` | Answer creativity | 0.3-0.7 | Lower for factual, higher for creative |
-| Retrieval k | Number of docs | 3-5 | More = broader context, slower |
+| Property Name | Config Type | Default Value | Recommended Range | Impact | Notes |
+|---|---|---|---|---|---|
+| `chunk_size` | Data Configuration | 1000 | 500-1500 | Context per retrieval | Smaller = focused (technical docs), Larger = more context (narrative) |
+| `chunk_overlap` | Data Configuration | 200 | 100-300 | Context continuity | Higher overlap = better flow but more storage |
+| `llm_temperature` | LLM Configuration | 0.7 | 0.1-1.0 | Answer creativity | 0.1 = factual, 0.7 = balanced, 1.0 = creative |
+| `k` (retrieval count) | Retrieval Setting | 3 | 3-5 | Number of retrieved docs | More docs = broader context but slower queries |
 
 ---
 
@@ -206,17 +240,20 @@ VECTOR_STORE_PATH = "../vector_store"  # Where to save FAISS database
 .\venv\Scripts\Activate.ps1
 
 # Run the main application
-python src/main.py
+python main.py
 ```
 
 This will:
 1. Load and embed all PDFs from `data/` folder
 2. Create/update the FAISS vector store
 3. Enter interactive query mode
+4. Log all operations to `logs/rag_pipeline.log`
 
 ### Interactive Query Mode
 
 ```
+=== RAG Pipeline Demo ===
+
 === Query Mode ===
 
 Ask a question (or 'exit' to quit): What is machine learning?
@@ -227,19 +264,23 @@ Answer: Machine learning is a subset of artificial intelligence that enables
 systems to learn and improve from experience without being explicitly programmed...
 
 Ask a question (or 'exit' to quit): exit
+
+Goodbye!
 ```
 
 ### Programmatic Usage
 
 ```python
-from src.ingestion import ingest_data
-from src.retrieval import query
+from src.rag_pipeline import RAGPipeline
 
-# Load and embed documents
-ingest_data()
+# Create pipeline instance
+pipeline = RAGPipeline()
+
+# Run ingestion phase
+pipeline.ingest()
 
 # Query the system
-answer = query("What is cloud computing?")
+answer = pipeline.query("What is cloud computing?")
 print(answer)
 ```
 
@@ -249,75 +290,113 @@ print(answer)
 
 ### 1. `src/config.py` - Configuration Module
 
-**Purpose**: Centralizes all configuration parameters
+**Purpose**: Centralizes all configuration parameters using a class-based approach
 
 **Key Components**:
-- LLM settings (model, API endpoint, temperature)
+- `Config` class: Container for all configuration values with read-only properties
+- LLM settings (base URL, API key, model name, temperature)
 - Data processing parameters (chunk size, overlap)
-- File paths (data folder, vector store location)
+- File paths (data folder, vector store location, logs directory)
+- Console logging toggle
+
+**Configuration Properties**:
+```python
+llm_base_url          # Local LM-Studio endpoint (default: http://127.0.0.1:1234/v1)
+llm_api_key           # API key for LLM service
+llm_model             # Embedding model name
+llm_temperature       # Temperature for generation (0.0-1.0)
+data_folder           # Path to input PDFs
+chunk_size            # Max characters per chunk (default: 1000)
+chunk_overlap         # Overlap between chunks (default: 200)
+vector_store_path     # Path to FAISS database
+console_logging_enabled  # Toggle console logging output
+```
 
 **Usage**:
 ```python
-from config import LLM_BASE_URL, CHUNK_SIZE, DATA_FOLDER
+from src.config import Config
+
+config = Config()
+print(config.chunk_size)  # 1000
+print(config.llm_model)   # text-embedding-nomic-embed-text-v1.5
 ```
 
 ### 2. `src/ingestion.py` - Data Ingestion Pipeline
 
-**Purpose**: Loads documents and creates embeddings
+**Purpose**: Loads documents and creates embeddings through a class-based pipeline
 
-**Key Functions**:
+**Ingestion Class Methods**:
 
-#### `load_pdfs(data_folder: str) -> list`
+#### `__init__(config: Config) -> None`
+- Initializes the ingestion pipeline with configuration
+- Sets up internal state for embeddings and vector operations
+
+#### `load_pdfs() -> list`
 - Scans data folder for PDF files
 - Uses `PyPDFLoader` to extract text
 - Returns list of Document objects
-- **Output**: Raw documents with metadata
+- **Logging**: Logs each PDF processed and total pages extracted
+- **Error Handling**: Continues with next file if one fails
 
 #### `chunk_documents(documents: list) -> list`
-- Splits documents into smaller chunks
-- Uses `RecursiveCharacterTextSplitter` for semantic coherence
-- Respects paragraph, sentence, and word boundaries
-- Adds overlap between chunks for context continuity
-- **Output**: Chunked documents ready for embedding
+- Splits documents into smaller chunks using `RecursiveCharacterTextSplitter`
+- Respects semantic boundaries (paragraphs, sentences, words)
+- Maintains overlap between chunks for context continuity
+- Returns chunked documents ready for embedding
+- **Logging**: Logs chunk count and statistics
 
 #### `create_vector_store(chunked_docs: list) -> FAISS`
-- Generates embeddings using OpenAI-compatible API
-- Creates FAISS (Facebook AI Similarity Search) index
-- Persists index to disk for later retrieval
-- **Output**: Saved FAISS database
+- Generates embeddings using LLM (via embeddings_utils)
+- Creates FAISS index for similarity search
+- Persists index to disk
+- Returns initialized FAISS vector store
+- **Error Handling**: Handles initialization and serialization errors
 
-#### `ingest_data()`
-- Main orchestration function
+#### `run() -> None`
+- Main orchestration method
 - Calls load → chunk → embed in sequence
-- **Usage**: `ingest_data()`
+- Logs all phases and handles errors gracefully
 
 **Example**:
 ```python
-from src.ingestion import ingest_data
+from src.config import Config
+from src.ingestion import Ingestion
 
-# Run full ingestion pipeline
-ingest_data()
+config = Config()
+ingestion = Ingestion(config)
+ingestion.run()
 # Output: Vector store saved to vector_store/
 ```
 
 ### 3. `src/retrieval.py` - Query & Retrieval Pipeline
 
-**Purpose**: Retrieves relevant documents and generates answers
+**Purpose**: Retrieves relevant documents and generates answers through a class-based pipeline
 
-**Key Functions**:
+**Retrieval Class Methods**:
 
-#### `load_vector_store() -> FAISS`
+#### `__init__(config: Config) -> None`
+- Initializes the retrieval pipeline with configuration
+- Sets up internal state for embeddings, LLM, and QA chain
+
+#### `load_vector_store() -> None`
 - Loads persisted FAISS database from disk
 - Initializes embeddings for query encoding
 - Must use same embedding model as ingestion
-- **Output**: FAISS vector store ready for search
+- **Error Handling**: Raises FileNotFoundError if vector store not found
+- **Logging**: Logs each step of loading process
 
-#### `create_qa_chain() -> RetrievalQA`
+#### `initialize_llm() -> None`
+- Initializes ChatOpenAI LLM for answer generation
+- Uses configuration for base URL, model, and temperature
+- **Error Handling**: Handles connection and configuration errors
+- **Caching**: Skips re-initialization if LLM already loaded
+
+#### `create_qa_chain() -> None`
 - Creates LangChain RetrievalQA chain
-- Configures retriever (k=3 documents)
-- Initializes LLM for answer generation
-- **Chain type**: "stuff" (concatenates all retrieved docs)
-- **Output**: Configured QA chain
+- Configures retriever (k=3 documents by default)
+- Sets up prompt template for context-aware generation
+- Chain type: "stuff" (concatenates all retrieved docs)
+- **Logging**: Logs chain initialization
 
 #### `query(question: str) -> str`
 - Main query function
@@ -326,18 +405,19 @@ ingest_data()
 - Generates answer using LLM with context
 - **Input**: User question
 - **Output**: Generated answer
+- **Logging**: Logs search results and generation steps
 
 **Flow**:
 ```
 User Question
     ↓
-embed(question)
+embed(question) using same embeddings as ingestion
     ↓
 FAISS.similarity_search(query_embedding, k=3)
     ↓
-retrieved_documents
+retrieved_documents (top 3 most similar chunks)
     ↓
-prompt = question + retrieved_documents
+prompt = question + context from retrieved_documents
     ↓
 LLM.generate(prompt)
     ↓
@@ -346,26 +426,123 @@ answer
 
 **Example**:
 ```python
-from src.retrieval import query
+from src.config import Config
+from src.retrieval import Retrieval
 
-answer = query("What is the main topic?")
+config = Config()
+retrieval = Retrieval(config)
+retrieval.load_vector_store()
+retrieval.initialize_llm()
+retrieval.create_qa_chain()
+
+answer = retrieval.query("What is the main topic?")
 print(answer)
 ```
 
-### 4. `src/main.py` - Main Entry Point
+### 4. `src/rag_pipeline.py` - RAG Pipeline Orchestrator
 
-**Purpose**: Provides CLI interface for the RAG system
+**Purpose**: Main orchestrator class that coordinates the entire RAG workflow
+
+**RAGPipeline Class**:
+
+#### `__init__() -> None`
+- Initializes Config, Ingestion, and Retrieval components
+- Sets up the complete pipeline
+
+#### `ingest() -> None`
+- Orchestrates the data ingestion phase
+- Loads PDFs, chunks them, and creates vector store
+- Delegates to Ingestion class
+
+#### `query(question: str) -> str`
+- Main entry point for querying the system
+- Delegates to Retrieval class
+- Returns generated answer
+
+**Usage**:
+```python
+from src.rag_pipeline import RAGPipeline
+
+pipeline = RAGPipeline()
+pipeline.ingest()           # Load and embed documents
+answer = pipeline.query("Question here?")
+print(answer)
+```
+
+### 5. `src/logging_config.py` - Logging Infrastructure
+
+**Purpose**: Centralized logging setup for consistent logging across all modules
+
+**Key Features**:
+- Dual handler setup: Console and File
+- Console output controlled by `Config.console_logging_enabled`
+- File logging always enabled with `RotatingFileHandler`
+- Log rotation: 10MB per file with 5 backups
+- Logs directory: `logs/rag_pipeline.log`
+- Consistent format: `timestamp - logger_name - level - function_name:line_number - message`
+
+**Function**:
+
+#### `setup_logging(logger_name: str = "rag_pipeline", log_level: int = logging.INFO) -> logging.Logger`
+- Configures and returns a logger with the specified name
+- Creates logs directory if it doesn't exist
+- Sets up both console and file handlers
+- Handles circular imports by importing Config inside function
+
+**Usage**:
+```python
+from src.logging_config import setup_logging
+
+logger = setup_logging(__name__)
+logger.info("Application started")
+logger.debug("Detailed debugging information")
+logger.error("An error occurred", exc_info=True)
+```
+
+### 6. `src/embeddings_utils.py` - Shared Utilities
+
+**Purpose**: Shared utilities for embedding initialization, used by both ingestion and retrieval
+
+**Key Function**:
+
+#### `initialize_embeddings(config: Config) -> OpenAIEmbeddings`
+- Initializes OpenAI-compatible embedding model
+- Uses settings from Config class
+- Returns initialized OpenAIEmbeddings instance
+- Disables embedding context length check for flexibility
+
+**Usage**:
+```python
+from src.config import Config
+from src.embeddings_utils import initialize_embeddings
+
+config = Config()
+embeddings = initialize_embeddings(config)
+# embeddings ready for use in vector store operations
+```
+
+### 7. `main.py` - Main Entry Point
+
+**Purpose**: Provides CLI interface for the RAG system with comprehensive logging
 
 **Flow**:
 1. Display welcome message
-2. Call `ingest_data()` to prepare knowledge base
-3. Enter interactive loop
-4. Process user queries until 'exit'
+2. Initialize RAGPipeline
+3. Call ingestion pipeline to load and embed documents
+4. Enter interactive loop for user queries
+5. Handle errors with user-friendly messages
+6. Log all activities to file and optionally console
 
 **Usage**:
 ```bash
-python src/main.py
+python main.py
 ```
+
+**Features**:
+- Logging of all pipeline phases
+- Query counter for session statistics
+- Proper error handling and reporting
+- Graceful exit on Ctrl+C or 'exit' command
 
 ---
 
@@ -375,70 +552,92 @@ python src/main.py
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              PHASE 1: DATA INGESTION (Offline)               │
+│              PHASE 1: DATA INGESTION (Offline)              │
 └─────────────────────────────────────────────────────────────┘
 
-1. User places PDF files in data/ folder
-         ↓
-2. ingest_data() is called
-         ↓
-3. load_pdfs()
-   - Scan data/ for PDF files
-   - Use PyPDFLoader to extract text
-   - Return: Raw documents with metadata
-         ↓
-4. chunk_documents()
-   - Split documents into chunks (1000 chars max)
-   - Add 200 char overlap for context continuity
-   - Use recursive splitting at paragraph/sentence/word boundaries
-   - Return: Chunked documents
-         ↓
-5. create_vector_store()
-   - Initialize embeddings using LLM
-   - Generate vector embedding for each chunk
-   - Create FAISS index
-   - Save to vector_store/ directory
-         ↓
-6. Vector store ready for queries
-   Status: Knowledge base prepared ✓
+1. User runs: python main.py
+   │
+   ├─ Setup logging (console + file with rotation)
+   │
+   └─ Create RAGPipeline() instance
+      ├─ Initialize Config (load settings from environment)
+      ├─ Initialize Ingestion(config)
+      └─ Initialize Retrieval(config)
+         │
+         └─ Call pipeline.ingest()
+            │
+            ├─ Ingestion.run()
+            │  │
+            │  ├─ load_pdfs()
+            │  │   - Scan data/ for PDF files
+            │  │   - Use PyPDFLoader to extract text
+            │  │   - Log each file processed
+            │  │   - Return: Raw documents with metadata
+            │  │
+            │  ├─ chunk_documents()
+            │  │   - Split documents into chunks (1000 chars max)
+            │  │   - Add 200 char overlap for context continuity
+            │  │   - Use recursive splitting (paragraph/sentence/word)
+            │  │   - Return: Chunked documents
+            │  │
+            │  └─ create_vector_store()
+            │      - Initialize embeddings using LLM-Studio
+            │      - Generate vector embedding for each chunk
+            │      - Create FAISS index
+            │      - Save to vector_store/ directory
+            │      - Log all operations
+            │
+            └─ Status: Knowledge base prepared ✓
+            
+            ├─ Logs written to: logs/rag_pipeline.log
+            └─ Vector store persisted to: vector_store/
 
 ┌─────────────────────────────────────────────────────────────┐
 │            PHASE 2: QUERY & RETRIEVAL (Online)              │
 └─────────────────────────────────────────────────────────────┘
 
-1. User enters question in interactive mode
-         ↓
-2. query(question) is called
-         ↓
-3. load_vector_store()
-   - Load FAISS from disk
-   - Initialize embeddings
-   - Return: Loaded vector store
-         ↓
-4. create_qa_chain()
-   - Initialize LLM
-   - Configure retriever (k=3)
-   - Create RetrievalQA chain
-   - Return: Configured chain
-         ↓
-5. Embedding & Retrieval
-   - Embed the user question
-   - Search vector store for similar chunks
-   - Retrieve top 3 most relevant documents
-   - Return: [doc1, doc2, doc3]
-         ↓
-6. Context Preparation
-   - Combine question + retrieved documents
-   - Create prompt for LLM
-         ↓
-7. LLM Generation
-   - Send prompt to LLM
-   - LLM generates answer based on context
-   - Return: Generated answer
-         ↓
-8. Display answer to user
-         ↓
-9. Loop back to step 1 for next question
+1. Enter interactive query mode
+   │
+   └─ Loop: while user != 'exit'
+      │
+      ├─ Get user query: "What is...?"
+      │
+      └─ Call pipeline.query(question)
+         │
+         ├─ Retrieval.load_vector_store()
+         │  │ (only on first query)
+         │  ├─ Initialize embeddings
+         │  └─ Load FAISS from disk
+         │
+         ├─ Retrieval.initialize_llm()
+         │  │ (only on first query)
+         │  ├─ Initialize ChatOpenAI
+         │  └─ Set temperature and model
+         │
+         ├─ Retrieval.create_qa_chain()
+         │  │ (only on first query)
+         │  ├─ Configure retriever (k=3 documents)
+         │  └─ Setup context + query template
+         │
+         ├─ Retrieval.query(question)
+         │  │
+         │  ├─ Embed the user question
+         │  ├─ Search vector store for similar chunks
+         │  ├─ Retrieve top 3 most relevant documents
+         │  │
+         │  ├─ Create context prompt:
+         │  │   "Question: {question}\n\nContext: {retrieved_docs}"
+         │  │
+         │  ├─ Send prompt to LLM
+         │  └─ LLM generates answer based on context
+         │
+         ├─ Return: Generated answer
+         │
+         ├─ Display answer to user
+         │
+         ├─ Log query and response
+         │
+         └─ Loop back for next question
 ```
 
 ### Data Flow Diagram
@@ -491,17 +690,17 @@ python src/main.py
 
 ### Core Packages
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `langchain` | ≥0.1.0 | LLM orchestration framework |
-| `langchain-community` | ≥0.0.10 | Community integrations (FAISS, PDFLoader) |
-| `langchain-openai` | ≥0.3.0 | OpenAI integrations (embeddings, LLM) |
-| `langchain-text-splitters` | ≥0.3.0 | Document chunking utilities |
-| `faiss-cpu` | ≥1.13.2 | Vector similarity search library |
-| `pypdf` | ≥3.17.1 | PDF parsing and extraction |
-| `openai` | ≥1.3.0 | OpenAI API client |
-| `python-dotenv` | ≥1.0.0 | Environment variable loading |
-| `numpy` | ≥2.4.3 | Numerical computing (required by FAISS) |
+| Package | Version | Required | Category | Purpose | Installation |
+|---------|---------|----------|----------|---------|--------------|
+| `langchain` | ≥0.1.0 | ✅ Yes | Framework | LLM orchestration and chain composition | `pip install langchain` |
+| `langchain-community` | ≥0.0.10 | ✅ Yes | Integrations | Community integrations (FAISS, PDFLoader, etc.) | `pip install langchain-community` |
+| `langchain-openai` | ≥0.3.0 | ✅ Yes | Integrations | OpenAI embeddings and LLM integration | `pip install langchain-openai` |
+| `langchain-text-splitters` | ≥0.3.0 | ✅ Yes | Text Processing | Semantic document chunking utilities | `pip install langchain-text-splitters` |
+| `faiss-cpu` | ≥1.13.2 | ✅ Yes | Vector DB | Facebook AI Similarity Search for embeddings | `pip install faiss-cpu` |
+| `pypdf` | ≥3.17.1 | ✅ Yes | Text Extraction | PDF text extraction and parsing | `pip install pypdf` |
+| `openai` | ≥1.3.0 | ✅ Yes | LLM API | OpenAI API client for models and embeddings | `pip install openai` |
+| `python-dotenv` | ≥1.0.0 | ⚠️ Optional | Configuration | Load environment variables from .env files | `pip install python-dotenv` |
+| `numpy` | ≥2.4.3 | ✅ Yes | Dependencies | Numerical computing (required by FAISS) | Auto-installed with faiss-cpu |
 
 ### Installation
 
@@ -532,7 +731,7 @@ pip install -e .
 ### Future Enhancement Ideas
 - 🔲 Support for multiple document formats (DOCX, TXT, HTML)
 - 🔲 Swap FAISS with pgVector is an open-source extension for PostgreSQL that allows you to store, index & search AI-generated embeddings (vectors) directly inside the database.
-- 🔲 Web UI (Streamlit/Gradio)
+- 🔲 Web UI (REACT / Angular)
 - 🔲 Hybrid search (BM25 + semantic)
 - 🔲 Query expansion and refinement
 - 🔲 Document metadata filtering
@@ -549,31 +748,59 @@ pip install -e .
 
 ### Adjusting Chunk Parameters
 
-**Smaller chunks (500-800 chars)**:
-- ✅ More focused retrieval
-- ❌ Less context per chunk
-- ✅ Faster processing
-- Use for: Dense technical documents
+To modify chunk size and overlap, edit `src/config.py`:
 
-**Larger chunks (1200-2000 chars)**:
-- ✅ More context retained
-- ✅ Fewer chunks to search
-- ❌ May retrieve less relevant information
-- Use for: Narrative or story documents
+```python
+class Config:
+    def __init__(self) -> None:
+        # Smaller chunks (500-800 chars) for dense technical documents
+        self._chunk_size = 500         # More focused retrieval
+        self._chunk_overlap = 100       # Less context per chunk
+        
+        # OR Larger chunks (1200-2000 chars) for narrative documents
+        self._chunk_size = 1500        # More context retained
+        self._chunk_overlap = 300       # Better continuity
+```
+
+**Trade-offs**:
+- **Smaller chunks (500-800)**: ✅ More focused retrieval, ✅ Faster, ❌ Less context
+- **Larger chunks (1200-2000)**: ✅ More context, ✅ Fewer chunks, ❌ Less precision
 
 ### Adjusting Temperature
 
+Modify the `llm_temperature` property in `src/config.py`:
+
 ```python
-LLM_TEMPERATURE = 0.1    # Very deterministic (factual Q&A)
-LLM_TEMPERATURE = 0.7    # Balanced (default)
-LLM_TEMPERATURE = 1.0    # Very creative (brainstorming)
+class Config:
+    def __init__(self) -> None:
+        self._llm_temperature = 0.1    # Very deterministic (factual Q&A)
+        # OR
+        self._llm_temperature = 0.7    # Balanced (default)
+        # OR
+        self._llm_temperature = 1.0    # Very creative (brainstorming)
 ```
 
-### Adjusting Retrieval Count
+### Adjusting Retrieval Count (k)
 
-In `src/retrieval.py`, change `search_kwargs={"k": 3}`:
+To retrieve more documents for context, modify `src/retrieval.py` in the `create_qa_chain()` method:
+
 ```python
-retriever=vector_store.as_retriever(search_kwargs={"k": 5})  # Get top 5 docs
+def create_qa_chain(self) -> None:
+    # ...
+    retriever = self._vector_store.as_retriever(
+        search_kwargs={"k": 5}  # Change from 3 to 5 documents
+    )
+    # ...
+```
+
+### Enabling Console Logging
+
+To see logs in the console while running, edit `src/config.py`:
+
+```python
+class Config:
+    def __init__(self) -> None:
+        self._console_logging_enabled = True  # Change from False
 ```
 
 ---
@@ -620,17 +847,17 @@ pip install -e .
 
 **Solution**:
 1. Check if LM-Studio is loaded with model
-2. Reduce CHUNK_SIZE in config.py
+2. Reduce `chunk_size` in `src/config.py` (e.g., from 1000 to 500)
 3. Process PDFs in batches
 
 ### Issue: Poor quality answers
 
 **Optimization tips**:
-1. Increase `k` (number of retrieved documents) from 3 to 5
-2. Reduce CHUNK_SIZE for more targeted retrieval
-3. Lower LLM_TEMPERATURE for factual answers (0.3-0.5)
+1. Increase `k` (number of retrieved documents) from 3 to 5 in `retrieval.py`
+2. Reduce `chunk_size` for more targeted retrieval in `config.py`
+3. Lower `llm_temperature` for factual answers (0.3-0.5) in `config.py`
 4. Ensure PDFs have good quality text
-5. Review retrieved documents with `verbose=True`
+5. Enable console logging with `config.console_logging_enabled = True` to review details
 
 ---
 
@@ -698,10 +925,10 @@ pip install -e .
 
 # 2. Prepare data
 # - Place PDFs in data/ folder
-# - Start LM-Studio and load a model
+# - Start LM-Studio and load a model (or configure OpenAI API)
 
 # 3. Run
-python src/main.py
+python main.py
 
 # 4. Query
 Ask a question (or 'exit' to quit): What is the main topic?
@@ -712,3 +939,17 @@ Ask a question (or 'exit' to quit): What is the main topic?
 **Last Updated**: March 2026
 
 For the most current information, check inline code comments in each module.
+
+## Version History
+
+**Current Version**: 0.2.0 (March 2026)
+- ✅ Refactored to class-based architecture (Config, Ingestion, Retrieval, RAGPipeline)
+- ✅ Added comprehensive logging with file rotation
+- ✅ Enhanced error handling across all modules
+- ✅ Improved import structure with relative imports
+- ✅ Added logging_config.py for centralized logging setup
+- ✅ Made configuration values read-only properties
+
+**Previous Version**: 0.1.0
+- Basic RAG pipeline with functional approach
+- Simple in-memory logging

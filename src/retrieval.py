@@ -1,137 +1,219 @@
 """
-Retrieval Module for the RAG Pipeline.
+Retrieval Class for the RAG Pipeline.
 
-This module handles the query/retrieval phase of the RAG system:
+This class handles the query/retrieval phase of the RAG system:
 1. Load the FAISS vector store created during ingestion
 2. Initialize the LLM for generating responses
 3. Create a RetrievalQA chain that combines retrieval with generation
 4. Process user queries and return augmented responses
-
-The retrieval pipeline uses semantic similarity search to find relevant
-document chunks, then passes them to the LLM as context for answer generation.
 """
 
-from langchain_openai.embeddings import OpenAIEmbeddings
+import logging
+from embeddings_utils import initialize_embeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.prompts import ChatPromptTemplate
-from config import VECTOR_STORE_PATH, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_TEMPERATURE
+from config import Config
+from logging_config import setup_logging
 
-def load_vector_store():
-    """
-    Load the FAISS vector store that was created during data ingestion.
-    
-    This function initializes the embedding model and loads the persisted
-    FAISS vector database from disk. The vector store contains all the
-    embedded document chunks ready for semantic similarity search.
-    
-    Returns:
-        FAISS: The loaded vector store object configured with embeddings.
-    
-    Notes:
-        - Ensures the same embedding model is used as during ingestion
-        - allow_dangerous_deserialization=True permits loading external data
-    """
-    # Initialize embeddings using the same model and settings as ingestion
-    # This ensures consistency between embedding and retrieval phases
-    embeddings = OpenAIEmbeddings(
-        model=LLM_MODEL,  # Must match the model used during ingestion
-        base_url=LLM_BASE_URL,  # Local endpoint
-        api_key=LLM_API_KEY,  # Dummy key for local model
-        check_embedding_ctx_length=False  # Bypass context length validation
-    )
+# Initialize logger
+logger = setup_logging(__name__)
 
-    # Load the vector store from disk
-    # Uses the same VECTOR_STORE_PATH where it was saved during ingestion
-    vector_store = FAISS.load_local(
-        VECTOR_STORE_PATH, 
-        embeddings,
-        allow_dangerous_deserialization=True)  # Allow loading external data
-    
-    return vector_store
 
-def create_qa_chain():
+class Retrieval:
     """
-    Create a RetrievalQA chain that combines document retrieval with LLM generation.
-    
-    This function creates the main RAG chain that:
-    1. Takes a user question and converts it to embeddings
-    2. Searches the vector store for semantically similar document chunks
-    3. Passes the retrieved chunks as context to the LLM
-    4. Generates an answer grounded in the retrieved context
-    
-    Returns:
-        RetrievalQA: A fully configured QA chain ready for querying.
-    
-    Chain Type: "stuff"
-        The "stuff" chain type means all retrieved documents are combined
-        and passed directly to the LLM. (Alternative: "map_reduce" for larger contexts)
-    
-    Search Parameters:
-        k=3: Retrieve the top 3 most similar document chunks for context.
-             This balances relevance with context window limitations.
-    """
-    # Load the persistent vector store
-    vector_store = load_vector_store()
-    
-    # Initialize the LLM for generating answers
-    # Uses OpenAI-compatible API format pointing to local model
-    llm = ChatOpenAI(
-        base_url=LLM_BASE_URL,  # Local endpoint
-        api_key=LLM_API_KEY,  # Dummy key for local model
-        model=LLM_MODEL,  # The model to use for generation
-        temperature=LLM_TEMPERATURE  # Controls creativity (0.7 = balanced)
-    )
-    
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant. Use only the provided context to answer the question. "
-        "If the answer is not in the context, say exactly: Sorry, I don't know the answer to this question."
-        "Do not try to make up an answer."),
-        ("human", "Context: {context}\n\nQuestion: {question}")
-    ])
-    
-    # Create the RetrievalQA chain with custom prompt
-    # This combines the vector store retriever with the LLM for Q&A
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",  # Combine all retrieved docs and send to LLM
-        retriever=vector_store.as_retriever(search_kwargs={"k": 3}),  # Top 3 similar chunks
-        chain_type_kwargs={"prompt": chat_prompt}  # Use custom prompt template
-    )
-    
-    return qa_chain
+    A class-based retrieval and QA pipeline for RAG.
 
-def query(question: str) -> str:
+    This class manages vector store loading, LLM initialization, and query processing.
     """
-    Query the RAG pipeline with a user question.
-    
-    This is the main function to call when a user submits a question.
-    It orchestrates the entire RAG process:
-    1. Creates a new QA chain
-    2. Embeds the question and searches the vector store
-    3. Retrieves relevant document chunks
-    4. Generates an answer using the LLM with retrieved context
-    
-    Args:
-        question (str): The user's question to be answered by the RAG system.
-    
-    Returns:
-        str: The generated answer string based on retrieved documents and LLM generation.
-    
-    Example:
-        >>> answer = query("What is machine learning?")
-        >>> print(answer)
-        "Machine learning is a subset of artificial intelligence..."
-    """
-    # Create a new QA chain for this query
-    qa_chain = create_qa_chain()
-    
-    # Invoke the chain with the user's question
-    # The chain handles embedding, retrieval, and generation internally
-    result_dict = qa_chain.invoke({"query": question})
-    
-    # Extract the generated answer from the result dictionary
-    response = result_dict["result"]
-    
-    return response
+
+    def __init__(self, config) -> None:
+        """
+        Initialize the retrieval pipeline.
+
+        Args:
+            config: Configuration object with LLM settings and vector store path.
+        """
+        self._config = config
+        self._embeddings = None
+        self._vector_store = None
+        self._llm = None
+        self._qa_chain = None
+
+    def load_vector_store(self) -> None:
+        """
+        Load the FAISS vector store from disk.
+
+        Initializes embeddings and loads the persisted vector database.
+        
+        Raises:
+            FileNotFoundError: If vector store files are not found.
+            Exception: If embeddings initialization or vector store loading fails.
+        """
+        try:
+            logger.debug("Loading embeddings model...")
+            self._embeddings = initialize_embeddings(self._config)
+            logger.info("Embeddings model loaded successfully")
+            
+            logger.debug(f"Attempting to load FAISS vector store from: {self._config.vector_store_path}")
+            self._vector_store = FAISS.load_local(
+                self._config.vector_store_path,
+                self._embeddings,
+                allow_dangerous_deserialization=True
+            )
+            logger.info("FAISS vector store loaded successfully")
+            
+        except FileNotFoundError as e:
+            logger.error(f"Vector store not found at {self._config.vector_store_path}: {str(e)}", exc_info=True)
+            raise FileNotFoundError(
+                f"Vector store not found. Please run ingestion first. "
+                f"Expected location: {self._config.vector_store_path}"
+            ) from e
+        except ValueError as e:
+            logger.error(f"Invalid vector store format or deserialization error: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Failed to load vector store: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
+
+    def initialize_llm(self) -> None:
+        """
+        Initialize the LLM (Language Model).
+        
+        Raises:
+            ConnectionError: If unable to connect to the LLM service.
+            ValueError: If LLM configuration is invalid.
+            Exception: If LLM initialization fails.
+        """
+        try:
+            if self._llm is not None:
+                logger.debug("LLM already initialized, skipping re-initialization")
+                return
+            
+            logger.debug(f"Initializing LLM with base_url: {self._config.llm_base_url}")
+            logger.debug(f"LLM model: {self._config.llm_model}, temperature: {self._config.llm_temperature}")
+            
+            self._llm = ChatOpenAI(
+                base_url=self._config.llm_base_url,
+                api_key=self._config.llm_api_key,
+                model=self._config.llm_model,
+                temperature=self._config.llm_temperature
+            )
+            logger.info("LLM initialized successfully")
+            
+        except ConnectionError as e:
+            logger.error(f"Failed to connect to LLM service at {self._config.llm_base_url}: {str(e)}", exc_info=True)
+            raise
+        except ValueError as e:
+            logger.error(f"Invalid LLM configuration: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
+
+    def create_qa_chain(self) -> None:
+        """
+        Create the RetrievalQA chain for question answering.
+        
+        Raises:
+            TypeError: If LLM or vector store is not properly initialized.
+            Exception: If QA chain creation fails.
+        """
+        try:
+            if self._qa_chain is not None:
+                logger.debug("QA chain already created, skipping re-creation")
+                return
+            
+            if self._llm is None:
+                raise TypeError("LLM must be initialized before creating QA chain")
+            if self._vector_store is None:
+                raise TypeError("Vector store must be loaded before creating QA chain")
+            
+            logger.debug("Creating chat prompt template")
+            chat_prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant. Use only the provided context to answer the question. "
+                "If the answer is not in the context, say exactly: Sorry, I don't know the answer to this question."
+                "Do not try to make up an answer."),
+                ("human", "Context: {context}\n\nQuestion: {question}")
+            ])
+
+            logger.debug("Creating RetrievalQA chain with 'stuff' chain type and k=3 search results")
+            self._qa_chain = RetrievalQA.from_chain_type(
+                llm=self._llm,
+                chain_type="stuff",
+                retriever=self._vector_store.as_retriever(search_kwargs={"k": 3}),
+                chain_type_kwargs={"prompt": chat_prompt}
+            )
+            logger.info("QA chain created successfully")
+            
+        except TypeError as e:
+            logger.error(f"Invalid chain setup: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Failed to create QA chain: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
+
+    def query(self, question: str) -> str:
+        """
+        Query the RAG pipeline with a question.
+
+        Args:
+            question (str): The user's question to answer.
+
+        Returns:
+            str: The generated answer based on retrieved context.
+            
+        Raises:
+            ValueError: If question is empty or invalid.
+            FileNotFoundError: If vector store is not found.
+            Exception: If query execution fails.
+        """
+        try:
+            if not question or not isinstance(question, str):
+                logger.warning("Invalid question provided: must be a non-empty string")
+                raise ValueError("Question must be a non-empty string")
+            
+            logger.info(f"Processing query: {question[:100]}{'...' if len(question) > 100 else ''}")
+
+            # Lazy initialization - load vector store if not already loaded
+            if self._vector_store is None:
+                logger.debug("Vector store not loaded, loading now...")
+                self.load_vector_store()
+            
+            # Initialize LLM if not already done
+            if self._llm is None:
+                logger.debug("LLM not initialized, initializing now...")
+                self.initialize_llm()
+            
+            # Create QA chain if not already done
+            if self._qa_chain is None:
+                logger.debug("QA chain not created, creating now...")
+                self.create_qa_chain()
+
+            # Execute query
+            logger.debug(f"Executing query through QA chain")
+            result = self._qa_chain.invoke({"query": question})
+            
+            if not result or "result" not in result:
+                logger.warning("Query returned empty or malformed result")
+                return ""
+            
+            answer = result["result"]
+            logger.info(f"Query completed successfully. Answer length: {len(answer)} characters")
+            logger.debug(f"Answer: {answer[:200]}{'...' if len(answer) > 200 else ''}")
+            
+            return answer
+
+        except ValueError as e:
+            logger.error(f"Invalid input: {str(e)}", exc_info=True)
+            raise
+        except FileNotFoundError as e:
+            logger.error(f"Required resource not found: {str(e)}", exc_info=True)
+            raise
+        except ConnectionError as e:
+            logger.error(f"Connection error during query execution: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during query execution: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
