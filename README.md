@@ -254,13 +254,6 @@ This will:
 ```
 === RAG Pipeline Demo ===
 
-API loaded successfully
-Starting data ingestion phase...
-Loading PDF files from data folder...
-Chunking documents...
-Creating vector store...
-Data ingestion completed
-
 === Query Mode ===
 
 Ask a question (or 'exit' to quit): What is machine learning?
