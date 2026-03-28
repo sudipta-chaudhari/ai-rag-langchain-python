@@ -222,12 +222,12 @@ class Config:
 
 ### Parameter Tuning Guide
 
-| Parameter | Impact | Recommended | Notes |
-|-----------|--------|-------------|-------|
-| `CHUNK_SIZE` | Context per retrieval | 800-1500 | Larger = more context, less precise |
-| `CHUNK_OVERLAP` | Context continuity | 100-300 | Higher = better flow, more storage |
-| `LLM_TEMPERATURE` | Answer creativity | 0.3-0.7 | Lower for factual, higher for creative |
-| Retrieval k | Number of docs | 3-5 | More = broader context, slower |
+| Property Name | Config Type | Default Value | Recommended Range | Impact | Notes |
+|---|---|---|---|---|---|
+| `chunk_size` | Data Configuration | 1000 | 500-1500 | Context per retrieval | Smaller = focused (technical docs), Larger = more context (narrative) |
+| `chunk_overlap` | Data Configuration | 200 | 100-300 | Context continuity | Higher overlap = better flow but more storage |
+| `llm_temperature` | LLM Configuration | 0.7 | 0.1-1.0 | Answer creativity | 0.1 = factual, 0.7 = balanced, 1.0 = creative |
+| `k` (retrieval count) | Retrieval Setting | 3 | 3-5 | Number of retrieved docs | More docs = broader context but slower queries |
 
 ---
 
@@ -697,17 +697,17 @@ python main.py
 
 ### Core Packages
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `langchain` | ≥0.1.0 | LLM orchestration framework |
-| `langchain-community` | ≥0.0.10 | Community integrations (FAISS, PDFLoader) |
-| `langchain-openai` | ≥0.3.0 | OpenAI integrations (embeddings, LLM) |
-| `langchain-text-splitters` | ≥0.3.0 | Document chunking utilities |
-| `faiss-cpu` | ≥1.13.2 | Vector similarity search library |
-| `pypdf` | ≥3.17.1 | PDF parsing and extraction |
-| `openai` | ≥1.3.0 | OpenAI API client |
-| `python-dotenv` | ≥1.0.0 | Environment variable loading |
-| `numpy` | ≥2.4.3 | Numerical computing (required by FAISS) |
+| Package | Version | Required | Category | Purpose | Installation |
+|---------|---------|----------|----------|---------|--------------|
+| `langchain` | ≥0.1.0 | ✅ Yes | Framework | LLM orchestration and chain composition | `pip install langchain` |
+| `langchain-community` | ≥0.0.10 | ✅ Yes | Integrations | Community integrations (FAISS, PDFLoader, etc.) | `pip install langchain-community` |
+| `langchain-openai` | ≥0.3.0 | ✅ Yes | Integrations | OpenAI embeddings and LLM integration | `pip install langchain-openai` |
+| `langchain-text-splitters` | ≥0.3.0 | ✅ Yes | Text Processing | Semantic document chunking utilities | `pip install langchain-text-splitters` |
+| `faiss-cpu` | ≥1.13.2 | ✅ Yes | Vector DB | Facebook AI Similarity Search for embeddings | `pip install faiss-cpu` |
+| `pypdf` | ≥3.17.1 | ✅ Yes | Text Extraction | PDF text extraction and parsing | `pip install pypdf` |
+| `openai` | ≥1.3.0 | ✅ Yes | LLM API | OpenAI API client for models and embeddings | `pip install openai` |
+| `python-dotenv` | ≥1.0.0 | ⚠️ Optional | Configuration | Load environment variables from .env files | `pip install python-dotenv` |
+| `numpy` | ≥2.4.3 | ✅ Yes | Dependencies | Numerical computing (required by FAISS) | Auto-installed with faiss-cpu |
 
 ### Installation
 
